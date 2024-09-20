@@ -1,3 +1,10 @@
+
+
+diffusionmodels/__pycache__/
+.DS_Store
+examples/results*/*
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
