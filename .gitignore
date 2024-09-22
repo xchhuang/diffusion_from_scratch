@@ -3,7 +3,9 @@
 diffusionmodels/__pycache__/
 .DS_Store
 examples/results*/*
-
+scripts/train_cluster.sh
+results/*
+results/*/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

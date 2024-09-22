@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import argparse
 import sys
-sys.path.append('../')
+sys.path.append('./')
 from diffusionmodels.rectifiedflow import RectifiedFlow
 from datasets.godmodeanimation import GodModeAnimation
 from diffusers import DiffusionPipeline, DDIMScheduler, DDPMScheduler
@@ -11,11 +11,17 @@ import platform
 from accelerate import Accelerator
 from tqdm import tqdm
 import logging
-from neuralnets.unet import Unet
+from neuralnets.unet import Unet, get_unet
 import matplotlib.pyplot as plt
 import os
 import imageio
 
+
+seed = 42
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+np.random.seed(seed)
 
 parser = argparse.ArgumentParser(description='main')
 parser.add_argument('--diffusionmodel', type=str, default='RectifiedFlow', choices=['DDPM', 'DDIM', 'RectifiedFlow'])
@@ -28,19 +34,20 @@ parser.add_argument('--learning_rate', type=float, default=1e-4)
 parser.add_argument('--load_checkpoint', action='store_true')
 parser.add_argument('--train_or_test', type=str, default="train", choices=["train", "test"])
 parser.add_argument('--precision', type=str, default='fp16', choices=['fp16'])
+parser.add_argument('--neuralnet_name', type=str, default='unet_small', choices=['unet_small', 'unet_medium', 'unet_large'])
 args = parser.parse_args()
 
 logging.basicConfig(level=logging.INFO)
 
 
 def main():
-    output_folder = f"results/{args.dataset.split('/')[-1]}_{args.diffusionmodel}"
+    output_folder = f"results/{args.dataset.split('/')[-1]}_{args.diffusionmodel}_{args.neuralnet_name}"
     if not os.path.exists(f"{output_folder}/gif"):
         os.makedirs(f"{output_folder}/gif")
     
-    diffusionmodel = eval(args.diffusionmodel)()
+    
     dataset = args.dataset
-    data_folder = f"../../../repo/data/{dataset}/npz"
+    data_folder = f"../../repo/data/{dataset}/npz"
 
     accelerator = Accelerator(mixed_precision=args.precision)
     device = accelerator.device
@@ -59,10 +66,14 @@ def main():
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
 
-    unet = Unet(resolution=32)
+    unet = get_unet(args.neuralnet_name, resolution=32)
+    num_params = sum(p.numel() for p in unet.parameters() if p.requires_grad)
+    logging.info(f"Number of parameters: {num_params}")
     
     optimizer = torch.optim.AdamW(unet.parameters(), lr=args.learning_rate, weight_decay=0)
     
+    diffusionmodel = eval(args.diffusionmodel)()
+
     if args.load_checkpoint:
         model_path = output_folder+'/model.pth'
         if os.path.exists(model_path):
