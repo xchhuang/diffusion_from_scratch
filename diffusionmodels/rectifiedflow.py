@@ -15,6 +15,10 @@ class RectifiedFlow(BaseDiffusionModel):
         pass
 
     def add_noise(self, x, t, noise):
+        """
+        func: add noise to the input data (forward process), considered image and video data
+        """
+        
         alpha = t / self.num_train_timesteps
         if x.ndim == 4:
             alpha = alpha[:, None, None, None]

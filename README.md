@@ -1,6 +1,12 @@
 # diffusion_from_scratch
 Implementing diffusion models from scratch, with easy-to-read/use/customize code.
 
+
+## Install
+* Python 3.12
+* Pytorch 2.4.1
+
+
 ## Features
 
 
