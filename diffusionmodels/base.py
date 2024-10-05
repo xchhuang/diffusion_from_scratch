@@ -24,9 +24,19 @@ class BaseDiffusionModel(ABC):
 
 
     @abstractmethod
-    def add_noise(self, x, t, noise):
+    def add_noise(self, x, t, noise):   # TODO: add type annotations
+        """
+        Func:
+            Adds noise to the input data x as the forward process of diffusion models.
+        Args:
+            x (torch.Tensor): The input data.
+            t (torch.Tensor): The current timestep or timesteps as a tensor.
+            noise (torch.Tensor): The noise tensor to be added to the input data.
+        Returns:
+            torch.Tensor: The noisy data.
+        """
         raise NotImplementedError("add_noise method not implemented")
-    
+
 
     @abstractmethod
     def loss(self, x, t, noise):
