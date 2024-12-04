@@ -5,20 +5,16 @@ import torch.nn.functional as F
 import numpy as np
 import sys
 sys.path.append('../')
-from diffusionmodels.base import BaseDiffusionModel
+from diffusionmodels.basediffusion import BaseDiffusionModel
 
 
 class RectifiedFlow(BaseDiffusionModel):
     def __init__(self):
         super(RectifiedFlow, self).__init__()
         print("===> Using RectifiedFlow")
-        pass
-
-    def add_noise(self, x, t, noise):
-        """
-        func: add noise to the input data (forward process), considered image and video data
-        """
         
+
+    def add_noise(self, x: torch.Tensor, t: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
         alpha = t / self.num_train_timesteps
         if x.ndim == 4:
             alpha = alpha[:, None, None, None]

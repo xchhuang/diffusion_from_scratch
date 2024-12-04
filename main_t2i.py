@@ -4,8 +4,8 @@ import argparse
 import sys
 sys.path.append('./')
 from diffusionmodels.rectifiedflow import RectifiedFlow
-from datasets.godmodeanimation import GodModeAnimation
-from datasets.mmceleba import Multimodal_CelebA
+# from data.godmodeanimation import GodModeAnimation
+from data.mmceleba import Multimodal_CelebA
 from diffusers import DiffusionPipeline, DDIMScheduler, DDPMScheduler
 from torch.utils.data import DataLoader
 import platform
@@ -42,13 +42,13 @@ logging.basicConfig(level=logging.INFO)
 
 
 def main():
+    logging.info("===> Loading data and models ...")
     output_folder = f"results/{args.dataset.split('/')[-1]}_{args.diffusionmodel}_{args.neuralnet_name}"
     if not os.path.exists(f"{output_folder}/gif"):
         os.makedirs(f"{output_folder}/gif")
     
-    
     dataset = args.dataset
-    data_folder = f"../../repo/data/{dataset}/npz"
+    data_folder = f"D:/data/{dataset}/npz"
 
     accelerator = Accelerator(mixed_precision=args.precision)
     device = accelerator.device
@@ -95,7 +95,7 @@ def main():
         unet, optimizer, dataloader = accelerator.prepare(unet, optimizer, dataloader)
     
 
-
+    logging.info("===> Start testing...")
     if args.train_or_test == 'test':
         unet.eval()
 
@@ -143,7 +143,7 @@ def main():
         for iter, data in enumerate((dataloader)):
             
             image, text_input = data    # text_input instead of text, just for same sequence length
-            print('image:', image.shape, image.min(), image.max())
+            # print('image:', image.shape, image.min(), image.max())
             batch_size = image.shape[0]
             image = image.to(device)
             

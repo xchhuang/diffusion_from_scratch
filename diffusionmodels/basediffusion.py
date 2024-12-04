@@ -22,18 +22,27 @@ class BaseDiffusionModel(ABC):
         self.guidance_scale = 1.0
         self.scaled_vae_latent_factor = 0.18215
 
+        # for ddpm/ddim
+        self.beta_start = 0.0001
+        self.beta_end = 0.02
+        self.beta_schedule = 'linear'
+        if self.beta_schedule == 'linear':
+            self.betas = np.linspace(self.beta_start, self.beta_end, self.num_train_timesteps).astype(np.float32)
+        else:
+            raise NotImplementedError(f"beta_schedule={self.beta_schedule} not implemented")
+
 
     @abstractmethod
-    def add_noise(self, x, t, noise):   # TODO: add type annotations
+    def add_noise(self, x: torch.Tensor, t: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
         """
         Func:
             Adds noise to the input data x as the forward process of diffusion models.
         Args:
-            x (torch.Tensor): The input data.
-            t (torch.Tensor): The current timestep or timesteps as a tensor.
-            noise (torch.Tensor): The noise tensor to be added to the input data.
+            x (torch.Tensor, latents, [batch, frames, channels, height, width]): The input data.
+            t (torch.Tensor, 0-num_steps, [batch]): The current timestep or timesteps as a tensor.
+            noise (torch.Tensor, gaussian, [batch, frames, channels, height, width]): The noise tensor to be added to the input data.
         Returns:
-            torch.Tensor: The noisy data.
+            torch.Tensor: The noisy data (torch.Tensor).
         """
         raise NotImplementedError("add_noise method not implemented")
 
@@ -47,4 +56,8 @@ class BaseDiffusionModel(ABC):
     def sample(self, x, t):
         raise NotImplementedError("sample method not implemented")
     
+
+    
+    def set_neuralnet(self, neuralnet):
+        self.neuralnet = neuralnet
     

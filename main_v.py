@@ -4,7 +4,7 @@ import argparse
 import sys
 sys.path.append('./')
 from diffusionmodels.rectifiedflow import RectifiedFlow
-from datasets.godmodeanimation import GodModeAnimation
+from data.godmodeanimation import GodModeAnimation
 from diffusers import DiffusionPipeline, DDIMScheduler, DDPMScheduler
 from torch.utils.data import DataLoader
 import platform
@@ -15,6 +15,7 @@ from neuralnets.unet import Unet, get_unet
 import matplotlib.pyplot as plt
 import os
 import imageio
+import random
 
 
 seed = 42
@@ -41,13 +42,14 @@ logging.basicConfig(level=logging.INFO)
 
 
 def main():
+    logging.info("===> Loading data and models ...")
     output_folder = f"results/{args.dataset.split('/')[-1]}_{args.diffusionmodel}_{args.neuralnet_name}"
+    logging.info("===> output_folder: {}".format(output_folder))
     if not os.path.exists(f"{output_folder}/gif"):
         os.makedirs(f"{output_folder}/gif")
     
-    
     dataset = args.dataset
-    data_folder = f"../../repo/data/{dataset}/npz"
+    data_folder = f"D:/data/{dataset}/npz"
 
     accelerator = Accelerator(mixed_precision=args.precision)
     device = accelerator.device
@@ -86,8 +88,9 @@ def main():
     if platform.system() not in ['Darwin']:
         unet, optimizer, dataloader = accelerator.prepare(unet, optimizer, dataloader)
     
+    diffusionmodel.set_neuralnet(unet)
 
-
+    logging.info("===> Start testing ...")
     if args.train_or_test == 'test':
         unet.eval()
 
@@ -133,38 +136,40 @@ def main():
     for epoch in tqdm(range(args.epochs)):
         unet.train()
         for iter, data in enumerate((dataloader)):
-            
-            video, text_input = data    # text_input instead of text, just for same sequence length
-            
+
+            # text_input instead of text, just for same sequence length
+            video, text_input = data
             num_frames = video.shape[1]
             batch_size = video.shape[0]
             video = video.to(device)
             
-            with torch.no_grad():
+            with torch.inference_mode():
                 text_embeddings = text_encoder(text_input.input_ids.to(device))[0]
                 max_length = text_input.input_ids.shape[-1]
-                # if random.random() < args.cfg_probability:
-                #     uncond_input = tokenizer([""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt")
-                #     uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
-                #     # print('uncond_embeddings:', uncond_embeddings, uncond_embeddings.shape)
-                #     text_embeddings = uncond_embeddings  # Set conditions to None for unconditional
+                use_cfg = False
+                if use_cfg:
+                    if random.random() < args.cfg_probability:
+                        uncond_input = tokenizer([""] * batch_size, padding="max_length", max_length=max_length, return_tensors="pt")
+                        uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
+                        text_embeddings = uncond_embeddings  # Set conditions to None for unconditional
 
-
-            t = torch.randint(0, num_train_timesteps, (video.shape[0], )).to(device)
+            # noise and timestep can be optimized, sampled in a different way: BNDM, Logit-Normal Sampling, SNR
             noise = torch.randn_like(video).to(device)
-
+            t = torch.randint(0, num_train_timesteps, (video.shape[0], )).to(device)
+            # noisy samples
             x_t = diffusionmodel.add_noise(video, t, noise)
-            
+            # neuralnet prediction
             pred = unet(x_t, t, text_embeddings)
+            # loss function
             loss = diffusionmodel.loss(pred, (video - noise))
-            losses.append(loss.item())
+            # backpropagation
             optimizer.zero_grad()
             accelerator.backward(loss)
-
-            params_to_clip = unet.parameters()
-            accelerator.clip_grad_norm_(params_to_clip, 1.0)
-            
+            # gradient clipping
+            accelerator.clip_grad_norm_(unet.parameters(), 1.0)
             optimizer.step()
+
+            losses.append(loss.item())
 
             if iter % 1000 == 0:
                 logging.info('loss: {:.4f}'.format(loss.item()))
