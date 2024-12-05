@@ -11,7 +11,7 @@ from diffusionmodels.basediffusion import BaseDiffusionModel
 class RectifiedFlow(BaseDiffusionModel):
     def __init__(self):
         super(RectifiedFlow, self).__init__()
-        print("===> Using RectifiedFlow")
+        # print("===> Using RectifiedFlow")
         
 
     def add_noise(self, x: torch.Tensor, t: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
@@ -30,6 +30,10 @@ class RectifiedFlow(BaseDiffusionModel):
         return F.mse_loss(pred, tar)
 
 
+    def sample_noise(self, data):
+        return torch.randn_like(data)
+    
+    
     def sample(self, model, x_start, cond=None):
         
         x_alpha = x_start

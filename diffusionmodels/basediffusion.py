@@ -6,6 +6,30 @@ sys.path.append('../')
 from abc import ABC, abstractmethod
 
 
+
+def logit_normal_sampling(device, batch_size, m=0.0, s=1.0):
+    """
+    Logit-Normal sampling for diffusion timesteps.
+    
+    Args:
+        batch_size (int): Number of samples to generate.
+        m (float): Location parameter (mean of the normal distribution in logit space).
+        s (float): Scale parameter (stddev of the normal distribution in logit space).
+        device (str): Device for computation ("cuda" or "cpu").
+        
+    Returns:
+        torch.Tensor: Samples from the logit-normal distribution in the range (0, 1).
+    """
+    # Step 1: Sample from the normal distribution N(m, s)
+    u = torch.normal(mean=m, std=s, size=(batch_size,), device=device)
+    
+    # Step 2: Map to the unit interval using the sigmoid function
+    t = torch.sigmoid(u)
+    
+    return t
+
+
+
 class BaseDiffusionModel(ABC):
 
     def __init__(self):
@@ -31,7 +55,9 @@ class BaseDiffusionModel(ABC):
         else:
             raise NotImplementedError(f"beta_schedule={self.beta_schedule} not implemented")
 
-
+        self.timesteps_sample_scheduler = 'logit_normal'  # linear, logit_normal
+        
+    
     @abstractmethod
     def add_noise(self, x: torch.Tensor, t: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
         """
@@ -53,6 +79,12 @@ class BaseDiffusionModel(ABC):
 
 
     @abstractmethod
+    def sample_noise(self, data):
+        # noise can be customized/sampled in a different way, such as BNDM, Logit-Normal Sampling, SNR
+        raise NotImplementedError("sample_noise method not implemented")
+    
+
+    @abstractmethod
     def sample(self, x, t):
         raise NotImplementedError("sample method not implemented")
     
@@ -61,3 +93,22 @@ class BaseDiffusionModel(ABC):
     def set_neuralnet(self, neuralnet):
         self.neuralnet = neuralnet
     
+
+    # timesteps can be customized/sampled in a different way, such as Logit-Normal Sampling, SNR
+    def sample_timesteps(self, device, batch_size):
+        t = torch.randint(0, self.num_train_timesteps, (batch_size, )).to(device)
+        if self.timesteps_sample_scheduler == 'linear':
+            pass
+        elif self.timesteps_sample_scheduler == 'logit_normal':
+            t = logit_normal_sampling(device, batch_size)
+        else:
+            raise NotImplementedError(f"timesteps_sample_scheduler={self.timesteps_sample_scheduler} not implemented")
+        return t
+    
+
+    
+        
+    
+
+
+        
