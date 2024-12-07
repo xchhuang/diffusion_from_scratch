@@ -101,6 +101,7 @@ class BaseDiffusionModel(ABC):
             pass
         elif self.timesteps_sample_scheduler == 'logit_normal':
             t = logit_normal_sampling(device, batch_size)
+            t = (t * self.num_train_timesteps).long()
         else:
             raise NotImplementedError(f"timesteps_sample_scheduler={self.timesteps_sample_scheduler} not implemented")
         return t

@@ -160,13 +160,12 @@ def main():
             noise = diffusionmodel.sample_noise(video)
             # t = torch.randint(0, num_train_timesteps, (video.shape[0], )).to(device)
             t = diffusionmodel.sample_timesteps(device, video.shape[0])
-
             # noisy samples
             x_t = diffusionmodel.add_noise(video, t, noise)
             # neuralnet prediction
-            pred = unet(x_t, t, text_embeddings)
+            pred = diffusionmodel.neuralnet(x_t, t, text_embeddings)
             # loss function
-            loss = diffusionmodel.loss(pred, (video - noise))
+            loss = diffusionmodel.loss(pred, video, noise)
             # backpropagation
             optimizer.zero_grad()
             accelerator.backward(loss)

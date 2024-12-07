@@ -26,8 +26,8 @@ class RectifiedFlow(BaseDiffusionModel):
         return x_alpha
     
 
-    def loss(self, pred, tar):
-        return F.mse_loss(pred, tar)
+    def loss(self, pred, tar, noise):
+        return F.mse_loss(pred, (tar - noise))
 
 
     def sample_noise(self, data):
